@@ -100,13 +100,12 @@ def _create_transcriber(
 
 
 def _ensure_file_and_output(req: TranscribeRequest) -> str:
-    input_path = os.path.abspath(req.file_path)
+    input_path = req.file_path
     if not os.path.exists(input_path):
         raise HTTPException(status_code=400, detail=f"file_path does not exist: {input_path}")
 
     # Force output directory to be the same as input file's directory
-    output_dir = os.path.dirname(input_path) or os.getcwd()
-    output_dir = os.path.abspath(output_dir)
+    output_dir = "out_api"
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -134,7 +133,7 @@ def _writer_args() -> Dict[str, Any]:
 
 
 async def _run_transcription(req: TranscribeRequest) -> str:
-    input_path = os.path.abspath(req.file_path)
+    input_path = req.file_path
     output_dir = _ensure_file_and_output(req)
 
     options = _build_default_options(req.language)
@@ -152,9 +151,12 @@ async def _run_transcription(req: TranscribeRequest) -> str:
             options=options,
         )
 
+        # Compute the target VTT path with timestamp and make writer use that basename
+        vtt_target_path = _compute_vtt_output_path(input_path, output_dir)
         writer = get_writer("vtt", output_dir)
-        writer(result, input_path, _writer_args())
-        return _compute_vtt_output_path(input_path, output_dir)
+        # Pass the timestamped target path as the "audio_path" so writer names accordingly
+        writer(result, vtt_target_path, _writer_args())
+        return vtt_target_path
 
     vtt_path = await run_in_threadpool(_do_work)
     return vtt_path
@@ -228,11 +230,12 @@ if __name__ == "__main__":
     uvicorn.run(app, host=args.host, port=args.port, reload=False, access_log=True)
 
 """
-python start_server.py --port 8101 --model large-v3 --model_dir ./ --local_files_only true --batched true --batch_size 8
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/home/jimx/miniconda3/lib/python3.12/site-packages/nvidia/cudnn/lib"
+python start_server.py --port 8101 --model large-v3 --batched true --batch_size 8
 
 curl -X POST http://localhost:8101/transcribe \
--H "Content-Type: application/json" \
--d '{"file_path": "/home/jimx/codes/whisper-ctranslate2/e2e-tests/dosparlants.mp3", "language": "zh"}'
+  -H "Content-Type: application/json" \
+  -d '{"file_path": "/home/jimx/test.mp4", "language": "zh"}'
 
 
 
