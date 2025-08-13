@@ -189,7 +189,7 @@ def main():
 
     output_dir = os.path.abspath(output_dir)
     if model_directory:
-        model_filename = os.path.join(model_directory, "model.bin")
+        model_filename = os.path.join(model_directory, "model.safetensors")
         if not os.path.exists(model_filename):
             sys.stderr.write(f"Model file '{model_filename}' does not exists\n")
             return
