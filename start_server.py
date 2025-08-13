@@ -1,7 +1,7 @@
 import os
 import sys
-import asyncio
 from typing import Optional, Dict, Any
+import datetime
 
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
@@ -111,9 +111,15 @@ def _ensure_file_and_output(req: TranscribeRequest) -> str:
     return output_dir
 
 
+
 def _compute_vtt_output_path(input_path: str, output_dir: str) -> str:
+    """
+    Compute the output VTT file path, appending a timestamp to the filename for uniqueness.
+    """
     base = os.path.splitext(os.path.basename(input_path))[0]
-    return os.path.abspath(os.path.join(output_dir, f"{base}.vtt"))
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{base}_{timestamp}.vtt"
+    return os.path.abspath(os.path.join(output_dir, filename))
 
 
 def _writer_args() -> Dict[str, Any]:
